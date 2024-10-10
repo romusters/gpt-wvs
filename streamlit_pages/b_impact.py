@@ -13,7 +13,7 @@ conn_str = st.secrets["CONN_STR"]
 
 @st.cache_data
 def get_data():
-    blob_client = BlobClient.from_connection_string(conn_str=conn_str, container_name="data", blob_name="cjib_applicable_new_book.csv")
+    blob_client = BlobClient.from_connection_string(conn_str=conn_str, container_name="data", blob_name="cjib_impact_v2.csv")
     csv_data = blob_client.download_blob().content_as_text()
     df = pd.read_csv(StringIO(csv_data)).sample(10)
     return df
@@ -26,7 +26,7 @@ def save_results(df):
     import random
     from datetime import datetime
     prefix = ''.join(random.choice(string.ascii_letters) for i in range(4))
-    blob_client = blob_service_client.get_blob_client(container="data", blob=f"results\{datetime.now()}_{prefix}_result.csv")
+    blob_client = blob_service_client.get_blob_client(container="data", blob=f"results\impact\{datetime.now()}_{prefix}_result.csv")
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False)
 
@@ -51,21 +51,23 @@ def show_question():
         row = df.iloc[current_index]
         
         # Maak drie kolommen
-        col1, col2,col3 = st.columns([1,5,5])
+        col1, col2,col3, col4, col5 = st.columns([1,5,1, 5,5])
         
         # Toon de waarden in de kolommen
-        col1.write(f"{row['article']}")
-        col2.write(f"{row['text']}")
-        col3.write(f"**AI oordeel:** {row['cjib_applicable_explanation']}")
+        col1.write(f"{row['huidig_artikel_naam']}")
+        col2.write(f"{row['huidig_artikel_tekst']}")
+        col3.write(f"{row['nieuw_artikel_naam']}")
+        col4.write(f"{row['nieuw_artikel_tekst']}")
+        col5.write(f"**AI oordeel:** {row['impact_uitleg']}")
 
         # Unieke sleutel voor elke input en knop
-        input_key = f"input_{current_index}_{row['article']}"
-        button_key = f"button_{current_index}_{row['article']}"
-        true_checkbox_key = f"true_checkbox_{current_index}_{row['article']}"
-        false_checkbox_key = f"false_checkbox_{current_index}_{row['article']}"
+        input_key = f"input_{current_index}_{row['huidig_artikel_naam']}"
+        button_key = f"button_{current_index}_{row['huidig_artikel_naam']}"
+        true_checkbox_key = f"true_checkbox_{current_index}_{row['huidig_artikel_naam']}"
+        false_checkbox_key = f"false_checkbox_{current_index}_{row['huidig_artikel_naam']}"
         
         # antwoord = st.checkbox(f"Is het oordeel van de AI correct over de relevantie van het artikel voor het CJIB?", key=input_key)
-        st.write("Is het oordeel van de AI correct over de relevantie van het artikel voor het CJIB?")
+        st.write("Is het oordeel van de AI correct over dat er een verschil is tussen de artikelen?")
        
         true_check = st.checkbox(f"Correct", key=true_checkbox_key)
         false_check = st.checkbox(f"Incorrect", key=false_checkbox_key)
@@ -75,9 +77,9 @@ def show_question():
         if true_check:
             # Voeg het antwoord toe aan de antwoordenlijst
             st.session_state.antwoorden.append({
-                'Artikel': row['article'],
-                'AI oordeel': row['cjib_applicable_explanation'],
-                'Gebruiker oordeel': "correct"
+                'huidig_artikel_naam': row['huidig_artikel_naam'],
+                'nieuw_artikel_naam': row['nieuw_artikel_naam'],
+                'gebruiker_oordeel': "correct"
             })
             st.success(f"Antwoord voor {row['article']} is opgeslagen!")
             # Verhoog de rij-index om naar de volgende rij te gaan
@@ -87,9 +89,9 @@ def show_question():
         elif false_check:
             # Voeg het antwoord toe aan de antwoordenlijst
             st.session_state.antwoorden.append({
-                'Artikel': row['article'],
-                'AI oordeel': row['cjib_applicable_explanation'],
-                'Gebruiker oordeel': "incorrect" #row['Antwoord']
+                'huidig_artikel_naam': row['huidig_artikel_naam'],
+                'nieuw_artikel_naam': row['nieuw_artikel_naam'],
+                'gebruiker_oordeel': "incorrect"
             })
             st.success(f"Antwoord voor {row['article']} is opgeslagen!")
             # Verhoog de rij-index om naar de volgende rij te gaan
@@ -105,8 +107,8 @@ def show_question():
         save_results(results_df)
 
 # Streamlit interface
-st.title("Evaluatie AI oordeel CJIB relevantie")
-st.subheader("Beoordeel of het artikel relevant is voor het CJIB.")
+st.title("Evaluatie AI oordeel verschil in oude en nieuwe artikelen")
+st.subheader("Beoordeel of het AI het verschil tussen oude en nieuwe artikelen correct heeft beoordeeld.")
 # Toon de vraag voor de huidige rij
 show_question()
 
